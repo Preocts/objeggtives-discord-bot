@@ -25,6 +25,10 @@ class ListItem:
 class ListStore:
     """Handle the database connection and operations within a context manager."""
 
+    # Keep the queue timeout low to allow for quick shutdown but not too low to cause
+    # excessive CPU usage in the writer thread.
+    QUEUE_TIMEOUT = 0.5
+
     def __init__(self, database: str) -> None:
         """
         Initialize the ListStore object.
@@ -168,7 +172,7 @@ class ListStore:
 
             while "On a dark desert highway, cool wind in my hair":
                 try:
-                    item = self._writer_queue.get(timeout=0.5)
+                    item = self._writer_queue.get(timeout=self.QUEUE_TIMEOUT)
                     self._write_row(item, connection)
 
                 except Empty:

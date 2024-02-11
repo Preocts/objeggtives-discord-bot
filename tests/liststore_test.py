@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import sqlite3
-import time
 
 import pytest
 
 from objeggtives.liststore import ListItem
 from objeggtives.liststore import ListStore
+
+
+@pytest.fixture(autouse=True, scope="session")
+def reduce_store_timeout() -> None:
+    # Reduce the timeout for the writer thread to speed up tests
+    ListStore.QUEUE_TIMEOUT = 0.0
+    return None
 
 
 def _has_table(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -107,9 +113,6 @@ def test_write_row_to_database_with_update(tmpdir) -> None:
 
     with ListStore(tempfile) as liststore:
         liststore.write(write_one)
-        # Sleep here to ensure our writer thread is looping properly
-        # This is for coverage purposes only
-        time.sleep(1)
         liststore.write(write_two)
 
     with sqlite3.connect(tempfile) as conn:
