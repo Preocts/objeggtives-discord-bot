@@ -89,6 +89,14 @@ class ListStore:
                 message TEXT NOT NULL
             );"""
         )
+        conn.execute(
+            """\
+            CREATE INDEX IF NOT EXISTS
+                idx_row
+            ON
+                liststore (author, message_reference);
+            """
+        )
 
     def open(self) -> None:  # noqa: A003 # Allow shadowing of built-in 'open'
         """
