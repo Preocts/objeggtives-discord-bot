@@ -10,8 +10,22 @@ Handle the database connection and operations within a context manager.
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import sqlite3
+
+
+@dataclasses.dataclass(frozen=True)
+class ListItem:
+    """A list item that represents a row in the liststore table."""
+
+    row_id: int
+    author: int
+    created_at: int
+    updated_at: int
+    closed_at: int
+    message_reference: int
+    message: str
 
 
 class ListStore:
@@ -101,7 +115,7 @@ class ListStore:
         conn.execute(
             """\
             CREATE TABLE IF NOT EXISTS liststore (
-                id INTEGER PRIMARY KEY,
+                row_id INTEGER PRIMARY KEY,
                 author INTEGER NOT NULL,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
