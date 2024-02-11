@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import sqlite3
+import time
 
 import pytest
 
+from objeggtives.liststore import ListItem
 from objeggtives.liststore import ListStore
 
 
@@ -72,3 +74,55 @@ def test_close_twice_raises_error() -> None:
 
     with pytest.raises(sqlite3.Error):
         liststore.close()
+
+
+def test_write_row_to_database(tmpdir) -> None:
+    write_one = ListItem(1, 2, 3, 0, 5, "message")
+    write_two = ListItem(1, 2, 3, 0, 6, "other message")
+
+    tempfile = tmpdir.join("test.db")
+    ListStore.initialize(tempfile)
+
+    with ListStore(tempfile) as liststore:
+        liststore.write(write_one)
+        liststore.write(write_two)
+
+    with sqlite3.connect(tempfile) as conn:
+        cursor = conn.execute("SELECT * FROM liststore")
+        rows = cursor.fetchall()
+
+        assert len(rows) == 2
+
+        # rowid needs to be included in the comparison
+        assert rows[0] == (1, 1, 2, 3, 0, 5, "message")
+        assert rows[1] == (2, 1, 2, 3, 0, 6, "other message")
+
+
+def test_write_row_to_database_with_update(tmpdir) -> None:
+    write_one = ListItem(1, 2, 3, 0, 5, "message")
+    write_two = ListItem(1, 2, 8, 9, 5, "new message")
+
+    tempfile = tmpdir.join("test.db")
+    ListStore.initialize(tempfile)
+
+    with ListStore(tempfile) as liststore:
+        liststore.write(write_one)
+        # Sleep here to ensure our writer thread is looping properly
+        # This is for coverage purposes only
+        time.sleep(1)
+        liststore.write(write_two)
+
+    with sqlite3.connect(tempfile) as conn:
+        cursor = conn.execute("SELECT * FROM liststore")
+        rows = cursor.fetchall()
+
+        assert len(rows) == 1
+        # Extra 1 here to account for the rowid
+        assert rows[0] == (1, 1, 2, 8, 9, 5, "new message")
+
+
+def test_write_with_open_connection() -> None:
+    liststore = ListStore(":memory:")
+
+    with pytest.raises(sqlite3.Error):
+        liststore.write(ListItem(1, 2, 3, 0, 5, "message"))

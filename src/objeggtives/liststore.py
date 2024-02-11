@@ -1,12 +1,4 @@
-"""
-Handle the database connection and operations within a context manager.
-
-[x] - Open the database connection
-[x] - Close the database connection
-[x] - Create database and tables if it does not exist
-[x] - Start writer thread (should use its own connection)
-[] - Method for writing to the database
-"""
+"""Handle the database connection and operations within a context manager."""
 
 from __future__ import annotations
 
@@ -22,7 +14,6 @@ from queue import Queue
 class ListItem:
     """A list item that represents a row in the liststore table."""
 
-    row_id: int
     author: int
     created_at: int
     updated_at: int
@@ -91,7 +82,7 @@ class ListStore:
         )
         conn.execute(
             """\
-            CREATE INDEX IF NOT EXISTS
+            CREATE UNIQUE INDEX IF NOT EXISTS
                 idx_row
             ON
                 liststore (author, message_reference);
@@ -137,6 +128,25 @@ class ListStore:
         self.connected = False
         self._writer.join()
 
+    def write(self, item: ListItem) -> None:
+        """
+        Write an item to the database.
+
+        This operates as a non-blocking operation and will queue the item for
+        writing. The item will be created or updated in the database based on
+        the message_reference and author.
+
+        Args:
+            item: The item to write to the database.
+
+        Raises:
+            sqlite3.Error: If the database connection is closed.
+        """
+        if not self.connected:
+            raise sqlite3.Error("Database connection is closed.")
+
+        self._writer_queue.put(item)
+
     def __enter__(self) -> ListStore:
         """Context manager entry point."""
         self.open()
@@ -151,14 +161,42 @@ class ListStore:
         try:
             connection = sqlite3.connect(self.database)
 
-            while self.connected:
+            while "On a dark desert highway, cool wind in my hair":
                 try:
                     item = self._writer_queue.get(timeout=0.5)
-                    print("Writing to database: ", item)
-                    # self._write_to_database(connection, item)
+                    self._write_row(item, connection)
 
                 except Empty:
-                    continue
+                    if not self.connected:
+                        break
 
         finally:
             connection.close()
+
+    def _write_row(self, item: ListItem, connection: sqlite3.Connection) -> None:
+        """Write a row to the database."""
+        connection.execute(
+            """\
+            INSERT INTO liststore (
+                author,
+                created_at,
+                updated_at,
+                closed_at,
+                message_reference,
+                message
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(author, message_reference) DO UPDATE SET
+                updated_at = excluded.updated_at,
+                closed_at = excluded.closed_at,
+                message = excluded.message;
+            """,
+            (
+                item.author,
+                item.created_at,
+                item.updated_at,
+                item.closed_at,
+                item.message_reference,
+                item.message,
+            ),
+        )
+        connection.commit()
