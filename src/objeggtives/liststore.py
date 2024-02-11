@@ -4,7 +4,7 @@ Handle the database connection and operations within a context manager.
 [x] - Open the database connection
 [x] - Close the database connection
 [x] - Create database and tables if it does not exist
-[] - Start writer thread (should use its own connection)
+[x] - Start writer thread (should use its own connection)
 [] - Method for writing to the database
 """
 
@@ -13,6 +13,9 @@ from __future__ import annotations
 import dataclasses
 import os
 import sqlite3
+import threading
+from queue import Empty
+from queue import Queue
 
 
 @dataclasses.dataclass(frozen=True)
@@ -47,7 +50,10 @@ class ListStore:
             raise FileNotFoundError(f"Database file {database} does not exist.")
 
         self.database = database
-        self._conn: sqlite3.Connection | None = None
+        self.connected = False
+        self._reader: sqlite3.Connection | None = None
+        self._writer = threading.Thread()
+        self._writer_queue: Queue[ListItem] = Queue()
 
     def open(self) -> None:  # noqa: A003 # Allow shadowing of built-in 'open'
         """
@@ -59,14 +65,36 @@ class ListStore:
         Raises:
             sqlite3.Error: If the database connection cannot be established.
         """
-        if self._conn is not None:
+        if self._reader is not None:
             raise sqlite3.Error("Database connection already open.")
 
-        self._conn = sqlite3.connect(self.database)
+        self._reader = sqlite3.connect(self.database)
+        self.connected = True
 
         # If we are a memory database the tables need to be created for this connection.
         if self.database == ":memory:":
-            self._create_tables(self._conn)
+            self._create_tables(self._reader)
+
+        # Create a writer thread to handle asynchronous processes wanting to write to the database.
+        self._writer = threading.Thread(target=self._writer_thread)
+        self._writer.start()
+
+    def _writer_thread(self) -> None:
+        """Thread target for writing to the database."""
+        try:
+            connection = sqlite3.connect(self.database)
+
+            while self.connected:
+                try:
+                    item = self._writer_queue.get(timeout=0.5)
+                    print("Writing to database: ", item)
+                    # self._write_to_database(connection, item)
+
+                except Empty:
+                    continue
+
+        finally:
+            connection.close()
 
     def close(self) -> None:
         """
@@ -75,11 +103,13 @@ class ListStore:
         Raises:
             sqlite3.Error: If the database connection is already closed.
         """
-        if self._conn is None:
+        if self._reader is None:
             raise sqlite3.Error("Database connection already closed.")
 
-        self._conn.close()
-        self._conn = None
+        self._reader.close()
+        self._reader = None
+        self.connected = False
+        self._writer.join()
 
     def __enter__(self) -> ListStore:
         """Context manager entry point."""

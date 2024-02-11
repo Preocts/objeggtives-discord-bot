@@ -45,26 +45,24 @@ def test_open_with_context_manager_from_file(tmpdir) -> None:
     ListStore.initialize(tempfile)
 
     with ListStore(tempfile) as liststore:
-        assert liststore._conn is not None
-        assert _has_table(liststore._conn, "liststore") is True
+        assert liststore._reader is not None
+        assert _has_table(liststore._reader, "liststore") is True
 
-    assert liststore._conn is None
+    assert liststore._reader is None
 
 
 def test_open_with_context_manager_from_memory() -> None:
     with ListStore(":memory:") as liststore:
-        assert liststore._conn is not None
-        assert _has_table(liststore._conn, "liststore") is True
+        assert liststore._reader is not None
+        assert _has_table(liststore._reader, "liststore") is True
 
-    assert liststore._conn is None
+    assert liststore._reader is None
 
 
 def test_open_twice_raises_error() -> None:
-    liststore = ListStore(":memory:")
-    liststore.open()
-
-    with pytest.raises(sqlite3.Error):
-        liststore.open()
+    with ListStore(":memory:") as liststore:
+        with pytest.raises(sqlite3.Error):
+            liststore.open()
 
 
 def test_close_twice_raises_error() -> None:
