@@ -1,8 +1,8 @@
 """
 Handle the database connection and operations within a context manager.
 
-[] - Open the database connection
-[] - Close the database connection
+[x] - Open the database connection
+[x] - Close the database connection
 [x] - Create database and tables if it does not exist
 [] - Start writer thread (should use its own connection)
 [] - Method for writing to the database
@@ -33,6 +33,48 @@ class ListStore:
             raise FileNotFoundError(f"Database file {database} does not exist.")
 
         self.database = database
+        self._conn: sqlite3.Connection | None = None
+
+    def open(self) -> None:  # noqa: A003 # Allow shadowing of built-in 'open'
+        """
+        Open the database connection.
+
+        Returns:
+            The ListStore object.
+
+        Raises:
+            sqlite3.Error: If the database connection cannot be established.
+        """
+        if self._conn is not None:
+            raise sqlite3.Error("Database connection already open.")
+
+        self._conn = sqlite3.connect(self.database)
+
+        # If we are a memory database the tables need to be created for this connection.
+        if self.database == ":memory:":
+            self._create_tables(self._conn)
+
+    def close(self) -> None:
+        """
+        Close the database connection.
+
+        Raises:
+            sqlite3.Error: If the database connection is already closed.
+        """
+        if self._conn is None:
+            raise sqlite3.Error("Database connection already closed.")
+
+        self._conn.close()
+        self._conn = None
+
+    def __enter__(self) -> ListStore:
+        """Context manager entry point."""
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:  # type: ignore
+        """Context manager exit point."""
+        self.close()
 
     @classmethod
     def initialize(cls, database: str) -> ListStore:
