@@ -41,10 +41,15 @@ class ListStore:
             raise FileNotFoundError(f"Database file {database} does not exist.")
 
         self.database = database
-        self.connected = False
+        self._connected = False
         self._reader: sqlite3.Connection | None = None
         self._writer = threading.Thread()
         self._writer_queue: Queue[ListItem] = Queue()
+
+    @property
+    def connected(self) -> bool:
+        """Return the connection status of the database."""
+        return self._connected
 
     @classmethod
     def initialize(cls, database: str) -> ListStore:
@@ -103,7 +108,7 @@ class ListStore:
             raise sqlite3.Error("Database connection already open.")
 
         self._reader = sqlite3.connect(self.database)
-        self.connected = True
+        self._connected = True
 
         # If we are a memory database the tables need to be created for this connection.
         if self.database == ":memory:":
@@ -125,7 +130,7 @@ class ListStore:
 
         self._reader.close()
         self._reader = None
-        self.connected = False
+        self._connected = False
         self._writer.join()
 
     def write(self, item: ListItem) -> None:
