@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import dataclasses
-import logging
 import os
 import sqlite3
 import threading
 from queue import Empty
 from queue import Queue
+
+from .struclogger import get_logger
 
 
 @dataclasses.dataclass(frozen=True)
@@ -29,7 +30,7 @@ class ListStore:
     # Keep the queue timeout low to allow for quick shutdown but not too low to cause
     # excessive CPU usage in the writer thread.
     QUEUE_TIMEOUT = 0.5
-    _logger = logging.getLogger(__name__)
+    _logger = get_logger(__name__)
 
     def __init__(self, database: str) -> None:
         """
