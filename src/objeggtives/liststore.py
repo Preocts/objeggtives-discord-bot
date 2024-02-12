@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import os
 import sqlite3
 import threading
@@ -28,6 +29,7 @@ class ListStore:
     # Keep the queue timeout low to allow for quick shutdown but not too low to cause
     # excessive CPU usage in the writer thread.
     QUEUE_TIMEOUT = 0.5
+    _logger = logging.getLogger(__name__)
 
     def __init__(self, database: str) -> None:
         """
@@ -70,6 +72,7 @@ class ListStore:
             raise FileExistsError(f"Database file {database} already exists.")
 
         with sqlite3.connect(database) as conn:
+            ListStore._logger.debug("Creating tables in database %s", database)
             ListStore._create_tables(conn)
 
         return cls(database)
@@ -113,14 +116,18 @@ class ListStore:
 
         self._reader = sqlite3.connect(self.database)
         self._connected = True
+        self._logger.debug("Opened database connection to %s", self.database)
 
         # If we are a memory database the tables need to be created for this connection.
         if self.database == ":memory:":
+            self._logger.debug("Creating tables in memory database")
             self._create_tables(self._reader)
 
         # Create a writer thread to handle asynchronous processes wanting to write to the database.
+        self._logger.debug("Starting writer thread")
         self._writer = threading.Thread(target=self._writer_thread)
         self._writer.start()
+        self._logger.debug("Started writer thread")
 
     def close(self) -> None:
         """
@@ -135,7 +142,10 @@ class ListStore:
         self._reader.close()
         self._reader = None
         self._connected = False
+        self._logger.debug("Closed database connection to %s", self.database)
+        self._logger.debug("Waiting for writer thread to finish...")
         self._writer.join()
+        self._logger.debug("Writer thread finished and closed.")
 
     def write(self, item: ListItem) -> None:
         """
@@ -153,8 +163,13 @@ class ListStore:
         """
         if not self.connected:
             raise sqlite3.Error("Database connection is closed.")
-
         self._writer_queue.put(item)
+        self._logger.debug(
+            "Queued item for writing. %s, %s, %s",
+            item.author,
+            item.message_reference,
+            item.message,
+        )
 
     def __enter__(self) -> ListStore:
         """Context manager entry point."""
@@ -173,6 +188,11 @@ class ListStore:
             while "On a dark desert highway, cool wind in my hair":
                 try:
                     item = self._writer_queue.get(timeout=self.QUEUE_TIMEOUT)
+                    self._logger.debug(
+                        "Writing to database. %s, %s",
+                        item.author,
+                        item.message_reference,
+                    )
                     self._write_row(item, connection)
 
                 except Empty:
