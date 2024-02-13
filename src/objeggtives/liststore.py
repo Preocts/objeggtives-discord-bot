@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import enum
 import os
 import sqlite3
 import threading
@@ -10,6 +11,21 @@ from queue import Empty
 from queue import Queue
 
 from .struclogger import get_logger
+
+__all__ = [
+    "ListItem",
+    "ListPriority",
+    "ListStore",
+]
+
+
+class ListPriority(enum.IntEnum):
+    """An enumeration of list priorities."""
+
+    NONE = 0
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
 
 
 @dataclasses.dataclass(frozen=True)
@@ -22,6 +38,7 @@ class ListItem:
     closed_at: int
     message_reference: int
     message: str
+    priority: ListPriority
 
 
 class ListStore:
@@ -90,7 +107,8 @@ class ListStore:
                 updated_at INTEGER NOT NULL,
                 closed_at INTEGER,
                 message_reference INTEGER,
-                message TEXT NOT NULL
+                message TEXT NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 1
             );"""
         )
         conn.execute(
@@ -213,12 +231,14 @@ class ListStore:
                 updated_at,
                 closed_at,
                 message_reference,
-                message
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                message,
+                priority
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(author, message_reference) DO UPDATE SET
                 updated_at = excluded.updated_at,
                 closed_at = excluded.closed_at,
-                message = excluded.message;
+                message = excluded.message,
+                priority = excluded.priority;
             """,
             (
                 item.author,
@@ -227,6 +247,7 @@ class ListStore:
                 item.closed_at,
                 item.message_reference,
                 item.message,
+                item.priority.value,
             ),
         )
         connection.commit()
