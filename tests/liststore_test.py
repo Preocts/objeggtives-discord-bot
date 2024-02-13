@@ -5,6 +5,7 @@ import sqlite3
 import pytest
 
 from objeggtives.liststore import ListItem
+from objeggtives.liststore import ListPriority
 from objeggtives.liststore import ListStore
 
 
@@ -83,8 +84,8 @@ def test_close_twice_raises_error() -> None:
 
 
 def test_write_row_to_database(tmpdir) -> None:
-    write_one = ListItem(1, 2, 3, 0, 5, "message")
-    write_two = ListItem(1, 2, 3, 0, 6, "other message")
+    write_one = ListItem(1, 2, 3, 0, 5, "message", ListPriority.LOW)
+    write_two = ListItem(1, 2, 3, 0, 6, "other message", ListPriority.HIGH)
 
     tempfile = tmpdir.join("test.db")
     ListStore.initialize(tempfile)
@@ -100,13 +101,13 @@ def test_write_row_to_database(tmpdir) -> None:
         assert len(rows) == 2
 
         # rowid needs to be included in the comparison
-        assert rows[0] == (1, 1, 2, 3, 0, 5, "message")
-        assert rows[1] == (2, 1, 2, 3, 0, 6, "other message")
+        assert rows[0] == (1, 1, 2, 3, 0, 5, "message", 1)
+        assert rows[1] == (2, 1, 2, 3, 0, 6, "other message", 3)
 
 
 def test_write_row_to_database_with_update(tmpdir) -> None:
-    write_one = ListItem(1, 2, 3, 0, 5, "message")
-    write_two = ListItem(1, 2, 8, 9, 5, "new message")
+    write_one = ListItem(1, 2, 3, 0, 5, "message", ListPriority.LOW)
+    write_two = ListItem(1, 2, 8, 9, 5, "new message", ListPriority.HIGH)
 
     tempfile = tmpdir.join("test.db")
     ListStore.initialize(tempfile)
@@ -121,11 +122,11 @@ def test_write_row_to_database_with_update(tmpdir) -> None:
 
         assert len(rows) == 1
         # Extra 1 here to account for the rowid
-        assert rows[0] == (1, 1, 2, 8, 9, 5, "new message")
+        assert rows[0] == (1, 1, 2, 8, 9, 5, "new message", 3)
 
 
 def test_write_with_open_connection() -> None:
     liststore = ListStore(":memory:")
 
     with pytest.raises(sqlite3.Error):
-        liststore.write(ListItem(1, 2, 3, 0, 5, "message"))
+        liststore.write(ListItem(1, 2, 3, 0, 5, "message", ListPriority.LOW))
