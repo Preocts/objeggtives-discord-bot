@@ -23,7 +23,7 @@ INTENT_MEMBERS = True
 INTENT_MESSAGE_CONTENT = True
 
 
-class objeggtivesBot(commands.Bot):
+class ObjeggtivesBot(commands.Bot):
     """Define the bot and handle basic events."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -43,7 +43,7 @@ class objeggtivesBot(commands.Bot):
 class _DebugCog(commands.Cog):
     """Define a cog for debugging purposes."""
 
-    def __init__(self, bot: objeggtivesBot) -> None:
+    def __init__(self, bot: ObjeggtivesBot) -> None:
         """Initialize the cog."""
         self.bot = bot
         logger.info("DebugCog initialized.")
@@ -54,7 +54,7 @@ class _DebugCog(commands.Cog):
         logger.info(f"{self.bot.user} has connected to Discord!")
 
     @commands.command()
-    async def ping(self, ctx: commands.Context[objeggtivesBot]) -> None:
+    async def ping(self, ctx: commands.Context[ObjeggtivesBot]) -> None:
         """Respond with a pong."""
         _sent = ctx.message.created_at
         _now = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -69,7 +69,7 @@ def main() -> int:
     intents.presences = INTENT_PRESENCE
     intents.members = INTENT_MEMBERS
     intents.message_content = INTENT_MESSAGE_CONTENT
-    bot = objeggtivesBot(command_prefix="!", intents=intents)
+    bot = ObjeggtivesBot(command_prefix="!", intents=intents)
 
     bot.run(DISCORD_TOKEN)
 
