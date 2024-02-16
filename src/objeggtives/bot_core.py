@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-import re
+import datetime
+from typing import Any
 
 import discord
+from discord.ext import commands
 from secretbox import SecretBox
 
-from .struclogger import get_logger
+from . import struclogger
 
 # Initialize runtime and bot
 secrets = SecretBox(auto_load=True)
-logger = get_logger(__name__)
+struclogger.init_struclogger()
+logger = struclogger.get_logger(__name__)
+logger.setLevel("INFO")
 
 # TODO: Replace these with a config object
 GUILD_ID = secrets.get("GUILD_ID")
@@ -17,40 +21,46 @@ DISCORD_TOKEN = secrets.get("DISCORD_TOKEN")
 INTENT_PRESENCE = True
 INTENT_MEMBERS = True
 INTENT_MESSAGE_CONTENT = True
-_PREFIX_PATTERN = re.compile("^!{1}[^!]+")
 
 
-class objeggtivesBot(discord.Client):
+class ObjeggtivesBot(commands.Bot):
     """Define the bot and handle basic events."""
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the bot."""
+        super().__init__(*args, **kwargs)
+
+    async def start(self, *args: Any, **kwargs: Any) -> None:
+        """Start the bot."""
+        logger.info("Starting bot...")
+
+        # TODO: Create a cog manager
+        await self.add_cog(_DebugCog(self))
+
+        await super().start(*args, **kwargs)
+
+
+class _DebugCog(commands.Cog):
+    """Define a cog for debugging purposes."""
+
+    def __init__(self, bot: ObjeggtivesBot) -> None:
+        """Initialize the cog."""
+        self.bot = bot
+        logger.info("DebugCog initialized.")
+
+    @commands.Cog.listener()
     async def on_ready(self) -> None:
-        """Simple console logging indicating ready event has fired."""
-        print("objeggtives bot is ready.")
-        logger.info("objeggtives bot is ready.")
+        """Log when the bot is ready."""
+        logger.info(f"{self.bot.user} has connected to Discord!")
 
-    async def on_message(self, message: discord.Message) -> None:
-        """Handle message events."""
+    @commands.command()
+    async def ping(self, ctx: commands.Context[ObjeggtivesBot]) -> None:
+        """Respond with a pong."""
+        _sent = ctx.message.created_at
+        _now = datetime.datetime.now(tz=datetime.timezone.utc)
+        _diff = _now - _sent
 
-        # Do not listen to myself
-        if message.author == self.user:
-            logger.debug("Ignoring message from self.")
-            print("Ignoring message from self.")
-            return None
-
-        # Do not listen to other bots
-        if message.author.bot:
-            logger.debug("Ignoring message from other bot.")
-            print("Ignoring message from other bot.")
-            return None
-
-        # Check if message is a command
-        if _PREFIX_PATTERN.match(message.content):
-            logger.info("Command received: %s", message.content)
-            print(f"Command received: {message.content}")
-            # TODO: Implement command handling here
-            await message.channel.send(f"Command received: {message.content}")
-
-        print(f"Message received: {message.content}")
+        await ctx.send(f"Pong! {_diff.total_seconds():.2f}s", delete_after=5)
 
 
 def main() -> int:
@@ -59,7 +69,7 @@ def main() -> int:
     intents.presences = INTENT_PRESENCE
     intents.members = INTENT_MEMBERS
     intents.message_content = INTENT_MESSAGE_CONTENT
-    bot = objeggtivesBot(command_prefix="!", intents=intents)
+    bot = ObjeggtivesBot(command_prefix="!", intents=intents)
 
     bot.run(DISCORD_TOKEN)
 

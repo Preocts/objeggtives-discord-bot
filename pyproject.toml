@@ -41,13 +41,6 @@ test = { file = [
         "requirements/requirements-test.txt",
     ] }
 
-# Alertative way to specify dependencies
-# dependencies = []
-
-# [project.optional-dependencies]
-# dev = []
-# test = []
-
 [project.urls]
 homepage = "https://github.com/Preocts/objeggtives-discord-bot"
 # documentation = ""
@@ -55,14 +48,8 @@ homepage = "https://github.com/Preocts/objeggtives-discord-bot"
 # changelog = ""
 
 # CLI scripts if needed
-# [project.scripts]
-# python-src-example = "objeggtives_discord_bot.sample:main"
-
-# [tool.setuptools.packages.find]
-# where = ["src"]  # ["."] by default
-# include = ["*"]  # ["*"] by default
-# exclude = ["tests"]  # empty by default
-# namespaces = true  # true by default
+[project.scripts]
+objeggtive-start = "objeggtives.bot_core:main"
 
 [tool.setuptools.package-data]
 "objeggtives_discord_bot" = [
