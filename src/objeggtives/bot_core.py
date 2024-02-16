@@ -54,7 +54,7 @@ class _DebugCog(commands.Cog):
         logger.info(f"{self.bot.user} has connected to Discord!")
 
     @commands.command()
-    async def ping(self, ctx: commands.Context) -> None:
+    async def ping(self, ctx: commands.Context[objeggtivesBot]) -> None:
         """Respond with a pong."""
         _sent = ctx.message.created_at
         _now = datetime.datetime.now(tz=datetime.timezone.utc)
