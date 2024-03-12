@@ -36,15 +36,12 @@ when working with python projects. Leveraging a `venv` will ensure the installed
 dependency files will not impact other python projects or any system
 dependencies.
 
-**Windows users**: Depending on your python install you will use `py` in place
-of `python` to create the `venv`.
-
 **Linux/Mac users**: Replace `python`, if needed, with the appropriate call to
 the desired version while creating the `venv`. (e.g. `python3` or `python3.8`)
 
-**All users**: Once inside an active `venv` all systems should allow the use of
-`python` for command line instructions. This will ensure you are using the
-`venv`'s python and not the system level python.
+Once inside an active `venv` all systems should allow the use of `python` for
+command line instructions. This will ensure you are using the `venv`'s python
+and not the system level python.
 
 ### Create the `venv`:
 
@@ -55,11 +52,7 @@ python -m venv venv
 Activate the `venv`:
 
 ```console
-# Linux/Mac
 . venv/bin/activate
-
-# Windows
-venv\Scripts\activate
 ```
 
 The command prompt should now have a `(venv)` prefix on it. `python` will now
