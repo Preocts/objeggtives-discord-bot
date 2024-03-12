@@ -9,6 +9,7 @@ import nox
 MODULE_NAME = "objeggtives"
 TESTS_PATH = "tests"
 COVERAGE_FAIL_UNDER = 0
+DEFAULT_PYTHON = "3.11"
 REQUIREMENT_IN_FILES = [
     pathlib.Path("requirements/requirements.in"),
     pathlib.Path("requirements/requirements-dev.in"),
@@ -50,7 +51,7 @@ def tests_with_coverage(session: nox.Session) -> None:
     session.run("coverage", "run", "-p", "-m", "pytest", TESTS_PATH)
 
 
-@nox.session()
+@nox.session(python=DEFAULT_PYTHON)
 def coverage_combine_and_report(session: nox.Session) -> None:
     """Combine all coverage partial files and generate JSON report."""
     print_standard_logs(session)
@@ -63,7 +64,7 @@ def coverage_combine_and_report(session: nox.Session) -> None:
     session.run("python", "-m", "coverage", "json")
 
 
-@nox.session()
+@nox.session(python=DEFAULT_PYTHON)
 def mypy_check(session: nox.Session) -> None:
     """Run mypy against package and all required dependencies."""
     print_standard_logs(session)
@@ -88,7 +89,7 @@ def docker(session: nox.Session) -> None:
     session.run("docker", "run", "-it", "--rm", "pydocker-test")
 
 
-@nox.session()
+@nox.session(python=DEFAULT_PYTHON)
 def build(session: nox.Session) -> None:
     """Build distrobution files."""
     print_standard_logs(session)
@@ -97,7 +98,7 @@ def build(session: nox.Session) -> None:
     session.run("python", "-m", "build")
 
 
-@nox.session()
+@nox.session(python=DEFAULT_PYTHON)
 def update(session: nox.Session) -> None:
     """Process requirement*.in files, updating only additions/removals."""
     print_standard_logs(session)
@@ -107,7 +108,7 @@ def update(session: nox.Session) -> None:
         session.run("pip-compile", "--no-emit-index-url", str(filename))
 
 
-@nox.session()
+@nox.session(python=DEFAULT_PYTHON)
 def upgrade(session: nox.Session) -> None:
     """Process requirement*.in files and upgrade all libraries as possible."""
     print_standard_logs(session)

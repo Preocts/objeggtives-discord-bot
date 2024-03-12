@@ -1,19 +1,14 @@
 from __future__ import annotations
 
+import os
 import sqlite3
+import threading
 
 import pytest
 
 from objeggtives.liststore import ListItem
 from objeggtives.liststore import ListPriority
 from objeggtives.liststore import ListStore
-
-
-@pytest.fixture(autouse=True, scope="session")
-def reduce_store_timeout() -> None:
-    # Reduce the timeout for the writer thread to speed up tests
-    ListStore.QUEUE_TIMEOUT = 0.0
-    return None
 
 
 def _has_table(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -49,23 +44,31 @@ def test_allow_memory_database() -> None:
     ListStore(":memory:")
 
 
+def test_create_tables_requires_connection() -> None:
+    liststore = ListStore(":memory:")
+    with pytest.raises(sqlite3.Error):
+        liststore._create_tables()
+
+
 def test_open_with_context_manager_from_file(tmpdir) -> None:
     tempfile = tmpdir.join("test.db")
     ListStore.initialize(tempfile)
 
     with ListStore(tempfile) as liststore:
-        assert liststore._reader is not None
-        assert _has_table(liststore._reader, "liststore") is True
+        assert liststore.connected is True
+        assert liststore._connection is not None
+        assert _has_table(liststore._connection, "liststore") is True
 
-    assert liststore._reader is None
+    assert liststore._connection is None
 
 
 def test_open_with_context_manager_from_memory() -> None:
     with ListStore(":memory:") as liststore:
-        assert liststore._reader is not None
-        assert _has_table(liststore._reader, "liststore") is True
+        assert liststore.connected is True
+        assert liststore._connection is not None
+        assert _has_table(liststore._connection, "liststore") is True
 
-    assert liststore._reader is None
+    assert liststore._connection is None
 
 
 def test_open_twice_raises_error() -> None:
@@ -130,3 +133,45 @@ def test_write_with_open_connection() -> None:
 
     with pytest.raises(sqlite3.Error):
         liststore.write(ListItem(1, 2, 3, 0, 5, "message", ListPriority.LOW))
+
+
+def _write_to_liststore(
+    liststore: ListStore,
+    rows_to_write: int,
+    thread_number: int,
+    start_flag: threading.Event,
+) -> None:
+    start_flag.wait()
+    for idx in range(rows_to_write):
+        liststore.write(ListItem(thread_number, 2, 3, 0, idx, "foo", ListPriority.LOW))
+
+
+def test_write_to_liststore_with_locking(tmpdir) -> None:
+    number_of_threads = 10
+    rows_to_write = 60
+    tempfile = tmpdir.join("test.db")
+    ListStore.initialize(tempfile)
+
+    with ListStore(tempfile) as liststore:
+        threads = []
+        start_flag = threading.Event()
+
+        for thread_number in range(number_of_threads):
+            args = (liststore, rows_to_write, thread_number, start_flag)
+            thread = threading.Thread(target=_write_to_liststore, args=args)
+            threads.append(thread)
+            thread.start()
+
+        start_flag.set()
+
+        for thread in threads:
+            thread.join()
+
+    with sqlite3.connect(tempfile) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM liststore")
+        rows = cursor.fetchall()
+
+    os.remove(tempfile)
+
+    assert len(rows) == number_of_threads * rows_to_write
