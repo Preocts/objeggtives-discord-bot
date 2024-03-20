@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import json
 import logging
 import traceback
@@ -58,7 +59,8 @@ def init_struclogger() -> None:
     logging.setLogRecordFactory(struc_factory)
 
 
-def get_logger(name: str) -> logging.Logger:
+@functools.lru_cache(maxsize=1)
+def get_logger(name: str = "objeggtives-bot") -> logging.Logger:
     """Create a logger with the structured logging factory."""
     logger = logging.getLogger(name)
     json_formatter = logging.Formatter("%(json_formatted)s")

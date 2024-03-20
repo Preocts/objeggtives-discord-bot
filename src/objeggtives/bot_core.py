@@ -13,7 +13,7 @@ from .cog_shopping import ShoppingCog
 # Initialize runtime and bot
 secrets = SecretBox(auto_load=True)
 struclogger.init_struclogger()
-logger = struclogger.get_logger(__name__)
+logger = struclogger.get_logger()
 logger.setLevel("INFO")
 
 # TODO: Replace these with a config object

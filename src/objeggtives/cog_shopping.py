@@ -6,7 +6,7 @@ from discord.ext import commands
 from . import liststore
 from . import struclogger
 
-logger = struclogger.get_logger(__name__)
+logger = struclogger.get_logger()
 
 STORE_NAME = "shopping.db"
 
