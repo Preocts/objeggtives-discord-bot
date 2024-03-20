@@ -9,6 +9,7 @@ import pytest
 from objeggtives.liststore import ListItem
 from objeggtives.liststore import ListPriority
 from objeggtives.liststore import ListStore
+from objeggtives.liststore import get_liststore
 
 
 def _has_table(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -71,19 +72,22 @@ def test_open_with_context_manager_from_memory() -> None:
     assert liststore._connection is None
 
 
-def test_open_twice_raises_error() -> None:
-    with ListStore(":memory:") as liststore:
-        with pytest.raises(sqlite3.Error):
-            liststore.open()
+def test_get_liststore_creates_new_file(tmpdir) -> None:
+    tempfile = tmpdir.join("test.db")
+    get_liststore(tempfile)
+
+    assert os.path.exists(tempfile)
 
 
-def test_close_twice_raises_error() -> None:
-    liststore = ListStore(":memory:")
-    liststore.open()
-    liststore.close()
+def test_open_using_get_liststore_twice_gives_same_connection() -> None:
+    first_liststore = get_liststore(":memory:")
+    with first_liststore as store_one:
+        expected_id = id(store_one._connection)
 
-    with pytest.raises(sqlite3.Error):
-        liststore.close()
+        second_liststore = get_liststore(":memory:")
+        with second_liststore as store_two:
+
+            assert id(store_two._connection) == expected_id
 
 
 def test_write_row_to_database(tmpdir) -> None:
