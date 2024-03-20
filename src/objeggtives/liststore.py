@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import enum
+import functools
 import os
 import sqlite3
 import threading
@@ -130,7 +131,8 @@ class ListStore:
             sqlite3.Error: If the database connection cannot be established.
         """
         if self._connection is not None:
-            raise sqlite3.Error("Database connection already open.")
+            self._logger.debug("Database connection already open.")
+            return None
 
         self._connection = sqlite3.connect(self.database, check_same_thread=False)
         self._logger.debug("Opened database connection to %s", self.database)
@@ -148,7 +150,8 @@ class ListStore:
             sqlite3.Error: If the database connection is already closed.
         """
         if self._connection is None:
-            raise sqlite3.Error("Database connection already closed.")
+            self._logger.debug("Database connection already closed.")
+            return None
 
         self._connection.close()
         self._connection = None
@@ -208,3 +211,18 @@ class ListStore:
     def __exit__(self, exc_type, exc_value, traceback) -> None:  # type: ignore
         """Context manager exit point."""
         self.close()
+
+
+@functools.lru_cache(maxsize=1)
+def get_liststore(store_name: str) -> ListStore:
+    """Return the ListStore instance."""
+
+    try:
+        store = ListStore(store_name)
+
+    except FileNotFoundError:
+        store = ListStore.initialize(store_name)
+
+    with store as open_store:
+        open_store._logger.debug("Connected: %s", open_store.connected)
+        return open_store
