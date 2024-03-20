@@ -8,6 +8,7 @@ from discord.ext import commands
 from secretbox import SecretBox
 
 from . import struclogger
+from .cog_shopping import ShoppingCog
 
 # Initialize runtime and bot
 secrets = SecretBox(auto_load=True)
@@ -34,8 +35,8 @@ class ObjeggtivesBot(commands.Bot):
         """Start the bot."""
         logger.info("Starting bot...")
 
-        # TODO: Create a cog manager
         await self.add_cog(_DebugCog(self))
+        await self.add_cog(ShoppingCog(self))
 
         await super().start(*args, **kwargs)
 
