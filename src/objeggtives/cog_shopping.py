@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime
+
 import discord
 from discord.ext import commands
 
@@ -43,3 +45,23 @@ class ShoppingCog(commands.Cog):
         )
 
         await ctx.send(embed=embed)
+
+    @commands.command(aliases=["sget", "shoppingget"])
+    async def shoppingwrite(self, ctx: commands.Context[commands.Bot]) -> None:
+        """Write a new item to the shopping store using the context message."""
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info("Shopping write requested by %s (%s).", ctx.author, ctx.author.id)
+
+        with self.store as store:
+            item = liststore.ListItem(
+                author=ctx.author.id,
+                created_at=int(now.timestamp()),
+                updated_at=int(now.timestamp()),
+                closed_at=0,
+                message_reference=ctx.message.id,
+                message=ctx.message.clean_content,
+                priority=liststore.ListPriority.NONE,
+            )
+            store.write(item)
+
+        await ctx.message.add_reaction("📝")
