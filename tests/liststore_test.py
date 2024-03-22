@@ -139,6 +139,26 @@ def test_write_with_open_connection() -> None:
         liststore.write(ListItem(1, 2, 3, 0, 5, "message", ListPriority.LOW))
 
 
+def test_counts_with_closed_connection() -> None:
+    liststore = ListStore(":memory:")
+
+    with pytest.raises(sqlite3.Error):
+        liststore.counts()
+
+
+def test_counts_returns_correct_values() -> None:
+    liststore = ListStore(":memory:")
+
+    with liststore as store:
+        store.write(ListItem(1, 2, 3, 0, 5, "message", ListPriority.LOW))
+        store.write(ListItem(1, 2, 3, 1, 6, "other message", ListPriority.HIGH))
+
+        total, closed = store.counts()
+
+    assert total == 2
+    assert closed == 1
+
+
 def _write_to_liststore(
     liststore: ListStore,
     rows_to_write: int,
