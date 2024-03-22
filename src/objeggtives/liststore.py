@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import enum
 import functools
@@ -156,6 +157,38 @@ class ListStore:
         self._connection.close()
         self._connection = None
         self._logger.debug("Closed database connection to %s", self.database)
+
+    def counts(self) -> tuple[int, int]:
+        """
+        Returns the total number of items and number of closed list items.
+
+        Returns:
+            A tuple of the total number of items and the number of closed items.
+
+        Raises:
+            sqlite3.Error: If the database connection is closed.
+        """
+        if not self._connection:
+            raise sqlite3.Error("Database connection is closed.")
+
+        with self._writer_lock:
+            with contextlib.closing(self._connection.cursor()) as cursor:
+                cursor.execute(
+                    """
+                    SELECT (
+                        SELECT COUNT(*)
+                        FROM liststore
+                    ) AS total,
+                    (
+                        SELECT COUNT(*)
+                        FROM liststore
+                        WHERE closed_at IS NOT NULL
+                        AND closed_at > 0
+                    ) AS closed;
+                    """
+                )
+
+                return cursor.fetchone()
 
     def write(self, item: ListItem) -> None:
         """
