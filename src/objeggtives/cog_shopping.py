@@ -27,10 +27,18 @@ class ShoppingCog(commands.Cog):
 
         with self.store as store:
             connected = store.connected
+            total, closed = store.counts()
+            percent_closed = (closed / total) * 100 if total > 0 else 0
 
         embed = discord.Embed(
             title="Shopping Store Info",
-            description=f"Connected: {connected}",
+            description=f"""\
+                Store Name: {STORE_NAME}
+                Connected: {connected},
+                Total Items: {total},
+                Closed Items: {closed},
+                Percent Closed: {percent_closed:.2f}%
+                """,
             color=discord.Color.blue(),
         )
 
