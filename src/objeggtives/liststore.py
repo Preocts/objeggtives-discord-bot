@@ -236,6 +236,62 @@ class ListStore:
             )
             self._connection.commit()
 
+    def get(
+        self,
+        *,
+        author_id: int | None = None,
+        include_closed: bool = False,
+    ) -> list[ListItem]:
+        """
+        Get rows from the table.
+
+        Keyword Args:
+            author: Limit results by author_id when provided
+            include_closed: Include open and closed items when provided.
+
+        Returns:
+            A list of ListItems
+
+        Raises:
+            sqlite3.Error: If the database connection is closed.
+        """
+        if not self._connection:
+            raise sqlite3.Error("Database connection is closed.")
+
+        # The select must mirror ListItem arguments as we will splat this later
+        sql = """\
+            SELECT
+                author,
+                created_at,
+                updated_at,
+                closed_at,
+                message_reference,
+                message,
+                priority
+            FROM
+                liststore
+        """
+
+        # Default the string to 1 here for simplified concat operations
+        include_sql = author_sql = "1"
+        sql_args = []
+
+        if not include_closed:
+            include_sql = "closed_at IS NULL OR closed_at = 0"
+
+        if author_id:
+            author_sql = "author == ?"
+            sql_args.append(author_id)
+
+        sql += f"WHERE {include_sql} AND {author_sql};"
+
+        with self._writer_lock:
+            with contextlib.closing(self._connection.cursor()) as cursor:
+                cursor.execute(sql, sql_args)
+                results = cursor.fetchall()
+
+        return [ListItem(*result) for result in results]
+
     def __enter__(self) -> ListStore:
         """Context manager entry point."""
         self.open()

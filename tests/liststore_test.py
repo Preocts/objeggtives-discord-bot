@@ -199,3 +199,68 @@ def test_write_to_liststore_with_locking(tmpdir) -> None:
     os.remove(tempfile)
 
     assert len(rows) == number_of_threads * rows_to_write
+
+
+def _store_for_get_test(tempfile) -> ListStore:
+    """Create a store for .get() tests."""
+
+    liststore = ListStore.initialize(tempfile)
+
+    with liststore as store:
+        store.write(ListItem(1, 2, 3, 0, 5, "message", ListPriority.LOW))
+        store.write(ListItem(2, 2, 3, 0, 6, "other message", ListPriority.HIGH))
+        store.write(ListItem(1, 2, 3, 1, 6, "other message", ListPriority.HIGH))
+
+    return liststore
+
+
+def test_get_default_params(tmpdir) -> None:
+    tempfile = tmpdir.join("test.db")
+    liststore = _store_for_get_test(tempfile)
+
+    with liststore as store:
+        results = store.get()
+
+    assert len(results) == 2
+    assert results[0].author == 1
+    assert results[1].author == 2
+
+
+def test_get_specific_author(tmpdir) -> None:
+    tempfile = tmpdir.join("test.db")
+    liststore = _store_for_get_test(tempfile)
+
+    with liststore as store:
+        results = store.get(author_id=1)
+
+    assert len(results) == 1
+    assert results[0].author == 1
+    assert not results[0].closed_at
+
+
+def test_get_specific_author_with_all_rows(tmpdir) -> None:
+    tempfile = tmpdir.join("test.db")
+    liststore = _store_for_get_test(tempfile)
+
+    with liststore as store:
+        results = store.get(author_id=1, include_closed=True)
+
+    assert len(results) == 2
+    assert results[1].closed_at
+
+
+def test_get_with_all_rows(tmpdir) -> None:
+    tempfile = tmpdir.join("test.db")
+    liststore = _store_for_get_test(tempfile)
+
+    with liststore as store:
+        results = store.get(include_closed=True)
+
+    assert len(results) == 3
+
+
+def test_get_requires_open_connection() -> None:
+    liststore = ListStore.initialize(":memory:")
+
+    with pytest.raises(sqlite3.Error):
+        liststore.get()
