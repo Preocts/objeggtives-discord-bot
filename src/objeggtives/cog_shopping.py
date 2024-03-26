@@ -86,7 +86,9 @@ class ShoppingCog(commands.Cog):
         lines = []
         for row in rows:
             created = datetime.datetime.fromtimestamp(row.created_at)
-            lines.append(f"- {created.strftime('%Y-%m-%d')} {row.message}")
+            lines.append(
+                f"{created.strftime('%Y-%m-%d')} - **{row.row_id}** -  {row.message}"
+            )
 
         _embed = {
             "color": 0x9900CC,
