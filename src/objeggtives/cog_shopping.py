@@ -52,6 +52,15 @@ class ShoppingCog(commands.Cog):
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Shopping write requested by %s (%s).", ctx.author, ctx.author.id)
 
+        content = " ".join(ctx.message.clean_content.split()[1:])
+
+        if not content:
+            logger.info("Empty message")
+            await ctx.message.add_reaction("❌")
+            return
+
+        logger.info("Saving: %s", content)
+
         with self.store as store:
             item = liststore.ListItem(
                 author=ctx.author.id,
@@ -59,7 +68,7 @@ class ShoppingCog(commands.Cog):
                 updated_at=int(now.timestamp()),
                 closed_at=0,
                 message_reference=ctx.message.id,
-                message=ctx.message.clean_content,
+                message=content,
                 priority=liststore.ListPriority.NONE,
             )
             store.write(item)
