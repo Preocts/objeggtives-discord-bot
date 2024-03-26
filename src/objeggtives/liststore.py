@@ -39,6 +39,7 @@ class ListItem:
     message_reference: int
     message: str
     priority: ListPriority
+    row_id: int = 0
 
 
 class ListStore:
@@ -267,7 +268,8 @@ class ListStore:
                 closed_at,
                 message_reference,
                 message,
-                priority
+                priority,
+                row_id
             FROM
                 liststore
         """

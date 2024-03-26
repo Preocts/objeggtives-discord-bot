@@ -222,7 +222,9 @@ def test_get_default_params(tmpdir) -> None:
         results = store.get()
 
     assert len(results) == 2
+    assert results[0].row_id == 1
     assert results[0].author == 1
+    assert results[1].row_id == 2
     assert results[1].author == 2
 
 
