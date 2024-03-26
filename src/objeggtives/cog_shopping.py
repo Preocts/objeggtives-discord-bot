@@ -52,6 +52,15 @@ class ShoppingCog(commands.Cog):
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Shopping write requested by %s (%s).", ctx.author, ctx.author.id)
 
+        content = " ".join(ctx.message.clean_content.split()[1:])
+
+        if not content:
+            logger.info("Empty message")
+            await ctx.message.add_reaction("❌")
+            return
+
+        logger.info("Saving: %s", content)
+
         with self.store as store:
             item = liststore.ListItem(
                 author=ctx.author.id,
@@ -59,9 +68,38 @@ class ShoppingCog(commands.Cog):
                 updated_at=int(now.timestamp()),
                 closed_at=0,
                 message_reference=ctx.message.id,
-                message=ctx.message.clean_content,
+                message=content,
                 priority=liststore.ListPriority.NONE,
             )
             store.write(item)
 
         await ctx.message.add_reaction("📝")
+
+    @commands.command(aliases=["slist"])
+    async def shoppinglist(self, ctx: commands.Context[commands.Bot]) -> None:
+        """Display a list of items from the store that are not closed."""
+        logger.info("Shopping list requested by %s, (%s)", ctx.author, ctx.author.id)
+
+        with self.store as store:
+            rows = store.get()
+
+        lines = []
+        for row in rows:
+            created = datetime.datetime.fromtimestamp(row.created_at)
+            lines.append(
+                f"{created.strftime('%Y-%m-%d')} - **{row.row_id}** -  {row.message}"
+            )
+
+        _embed = {
+            "color": 0x9900CC,
+            "title": "Active shopping list items:",
+            "author": {
+                "name": ctx.author.display_name,
+                "icon_url": ctx.author.display_avatar.url,
+            },
+            "description": "\n".join(lines),
+        }
+
+        embed = discord.Embed().from_dict(_embed)
+
+        await ctx.send(embed=embed)
