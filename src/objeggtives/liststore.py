@@ -100,8 +100,7 @@ class ListStore:
             raise sqlite3.Error("Database connection is closed.")
 
         with self._writer_lock:
-            self._connection.execute(
-                """\
+            self._connection.execute("""\
                 CREATE TABLE IF NOT EXISTS liststore (
                     row_id INTEGER PRIMARY KEY,
                     author INTEGER NOT NULL,
@@ -111,16 +110,13 @@ class ListStore:
                     message_reference INTEGER,
                     message TEXT NOT NULL,
                     priority INTEGER NOT NULL DEFAULT 1
-                );"""
-            )
-            self._connection.execute(
-                """\
+                );""")
+            self._connection.execute("""\
                 CREATE UNIQUE INDEX IF NOT EXISTS
                     idx_row
                 ON
                     liststore (author, message_reference);
-                """
-            )
+                """)
 
     def open(self) -> None:  # noqa: A003 # Allow shadowing of built-in 'open'
         """
@@ -174,8 +170,7 @@ class ListStore:
 
         with self._writer_lock:
             with contextlib.closing(self._connection.cursor()) as cursor:
-                cursor.execute(
-                    """
+                cursor.execute("""
                     SELECT (
                         SELECT COUNT(*)
                         FROM liststore
@@ -186,8 +181,7 @@ class ListStore:
                         WHERE closed_at IS NOT NULL
                         AND closed_at > 0
                     ) AS closed;
-                    """
-                )
+                    """)
 
                 return cursor.fetchone()
 
